@@ -45,7 +45,7 @@ public class SyntaxError {
     
     @Override
     public String toString() {
-        return String.format("Error at line %d, column %d: %s (Expected: %s, Found: %s)",
+        return String.format("Error la linea %d, columna %d: %s (Esperaba: %s, Encontró: %s)",
             line, column, message, expected, found);
     }
 }

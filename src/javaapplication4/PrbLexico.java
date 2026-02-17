@@ -373,9 +373,9 @@ public class PrbLexico extends javax.swing.JFrame
         if (hasLexicalErrors) {
             syntaxErrorModel.addRow(new Object[]{
                 "-", "-", 
-                "Fix lexical errors before syntactic analysis", 
+                "Corrija los errores léxicos antes del análisis sintáctico", 
                 "Valid tokens", 
-                "Lexical errors found"
+                "errores Lexicos encontrados"
             });
             return;
         }
@@ -389,7 +389,7 @@ public class PrbLexico extends javax.swing.JFrame
             syntaxErrorModel.setRowCount(0);
             syntaxErrorModel.addRow(new Object[]{
                 "✓", "✓", 
-                "Syntactic analysis completed successfully!", 
+                "¡Analisis sintactico sin errores!", 
                 "-", 
                 "-"
             });
