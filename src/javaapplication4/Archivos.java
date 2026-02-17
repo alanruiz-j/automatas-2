@@ -61,7 +61,7 @@ public class Archivos
         BufferedReader br = null;
 
         // Ruta relativa para la carpeta Datos
-        archivo = new File("Datos/archivo.txt");
+        archivo = new File("Datos/large_example.txt");
         try {
             fr = new FileReader(archivo);
             br = new BufferedReader(fr);
