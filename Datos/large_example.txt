@@ -1,4 +1,4 @@
-// Small syntax example
+// Codigo de prueba con ciclos y try
 structure Main (
     public const void main [ ] (
         int x;
