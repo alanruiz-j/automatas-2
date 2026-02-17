@@ -70,7 +70,7 @@ public class Token {
     @Override
     public String toString() {
         if (isError()) {
-            return String.format("Error at line %d, col %d: %s - %s", 
+            return String.format("Error en linea %d, col %d: %s - %s", 
                 line, column, lexeme, errorMessage);
         }
         return String.format("Token[%s, '%s', code=%d, line=%d, col=%d]", 

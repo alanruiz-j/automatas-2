@@ -374,8 +374,8 @@ public class PrbLexico extends javax.swing.JFrame
             syntaxErrorModel.addRow(new Object[]{
                 "-", "-", 
                 "Corrija los errores léxicos antes del análisis sintáctico", 
-                "Valid tokens", 
-                "errores Lexicos encontrados"
+                "Tokens válidos", 
+                "Errores léxicos encontrados"
             });
             return;
         }
