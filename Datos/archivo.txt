@@ -1,0 +1,13 @@
+// Simple test program - should parse successfully
+structure Main (
+    public const void main [ ] (
+        int x;
+        x = 1;
+        print"Hello World"];
+    )
+)
+
+
+
+
+
