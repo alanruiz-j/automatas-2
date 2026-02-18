@@ -6,7 +6,7 @@ structure Main (
         x = 10;
         y = 20;
         
-        if (x>5) (
+        if (x<y) (
             print["x is greater than 5"];
         ) else (
             print["x is 5 or less"];
