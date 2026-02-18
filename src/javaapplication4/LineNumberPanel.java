@@ -65,38 +65,46 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        
+
         Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, 
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                             RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
-        
-        FontMetrics fm = g.getFontMetrics();
-        int lineHeight = fm.getHeight();
-        int ascent = fm.getAscent();
-        
+
+        // Use the EXACT same FontMetrics as the textArea for consistency
+        FontMetrics textFm = textArea.getFontMetrics(textArea.getFont());
+        int lineHeight = textFm.getHeight();
+        int ascent = textFm.getAscent();
+
+        // Match insets to prevent initial offset drift
+        Insets textInsets = textArea.getInsets();
+        int topInset = textInsets.top;
+
         // Get the visible rectangle of the text area
         Rectangle visibleRect = textArea.getVisibleRect();
-        
+
         // Calculate which lines are visible
-        int startLine = (int) (visibleRect.y / lineHeight) + 1;
+        int startLine = (int) ((visibleRect.y - topInset) / lineHeight) + 1;
         int endLine = startLine + (int) (visibleRect.height / lineHeight) + 2;
         int totalLines = getLineCount();
         endLine = Math.min(endLine, totalLines);
-        
+
+        if (startLine < 1) startLine = 1;
+
         // Draw line numbers
         for (int line = startLine; line <= endLine; line++) {
-            int y = (line - 1) * lineHeight - visibleRect.y;
-            
+            // Calculate Y position with matching insets
+            int y = topInset + (line - 1) * lineHeight - visibleRect.y;
+
             // Highlight current line
             if (line == currentLine) {
                 g.setColor(new Color(220, 220, 220));
                 g.fillRect(0, y, getWidth(), lineHeight);
             }
-            
-            // Draw line number
+
+            // Draw line number using textArea's FontMetrics for perfect alignment
             g.setColor(Color.DARK_GRAY);
             String lineNum = String.valueOf(line);
-            int x = getWidth() - fm.stringWidth(lineNum) - 8;
+            int x = getWidth() - textFm.stringWidth(lineNum) - 8;
             g.drawString(lineNum, x, y + ascent);
         }
     }

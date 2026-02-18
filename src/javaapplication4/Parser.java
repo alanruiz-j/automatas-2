@@ -68,7 +68,12 @@ public class Parser {
         // Expect structure name (identifier)
         Token nameToken = consume(TokenType.IDENTIFICADOR, "Se esperaba nombre de estructura");
         if (nameToken != null) {
-            structure.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, nameToken));
+            // Strict check: structure name must be "Main"
+            if (!nameToken.getLexeme().equals("Main")) {
+                error("Se esperaba 'Main' como nombre de la estructura, pero se encontró '" + nameToken.getLexeme() + "'", nameToken);
+            } else {
+                structure.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, nameToken));
+            }
         }
         
         // Expect '('
