@@ -8,6 +8,9 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.geom.Rectangle2D;
 
 /**
  * A panel that displays line numbers for a JTextArea.
@@ -16,22 +19,29 @@ import java.awt.*;
  * @author Gerardo
  */
 public class LineNumberPanel extends JPanel implements DocumentListener, CaretListener {
-    
+
     private final JTextArea textArea;
-    private final JScrollPane scrollPane;
     private int currentLine = 1;
-    
-    public LineNumberPanel(JTextArea textArea, JScrollPane scrollPane) {
+
+    public LineNumberPanel(JTextArea textArea) {
         this.textArea = textArea;
-        this.scrollPane = scrollPane;
-        
+
         setBackground(new Color(240, 240, 240));
         setFont(textArea.getFont());
-        
+
         // Add listeners
         textArea.getDocument().addDocumentListener(this);
         textArea.addCaretListener(this);
-        
+
+        // Add component listener to track text area resize events
+        textArea.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updatePreferredWidth();
+                repaint();
+            }
+        });
+
         // Set preferred width based on initial line count
         updatePreferredWidth();
     }
@@ -75,37 +85,63 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
         int lineHeight = textFm.getHeight();
         int ascent = textFm.getAscent();
 
-        // Match insets to prevent initial offset drift
-        Insets textInsets = textArea.getInsets();
-        int topInset = textInsets.top;
+        // Step 1: Determine the current visible area using getClipBounds
+        Rectangle clip = g.getClipBounds();
+        if (clip == null) {
+            clip = getBounds();
+        }
 
-        // Get the visible rectangle of the text area
-        Rectangle visibleRect = textArea.getVisibleRect();
+        try {
+            // Step 2: Use viewToModel to identify which range of text lines are visible
+            // Convert clip bounds Y coordinates to document positions
+            Point topPoint = new Point(0, clip.y);
+            Point bottomPoint = new Point(0, clip.y + clip.height);
+            
+            int startOffset = textArea.viewToModel(topPoint);
+            int endOffset = textArea.viewToModel(bottomPoint);
+            
+            // Convert offsets to line numbers
+            int startLine = textArea.getLineOfOffset(startOffset) + 1;
+            int endLine = textArea.getLineOfOffset(endOffset) + 1;
+            int totalLines = getLineCount();
+            
+            // Ensure bounds are valid
+            if (startLine < 1) startLine = 1;
+            if (endLine > totalLines) endLine = totalLines;
 
-        // Calculate which lines are visible
-        int startLine = (int) ((visibleRect.y - topInset) / lineHeight) + 1;
-        int endLine = startLine + (int) (visibleRect.height / lineHeight) + 2;
-        int totalLines = getLineCount();
-        endLine = Math.min(endLine, totalLines);
+            // Step 3: Iterate over visible lines using modelToView2D
+            for (int line = startLine; line <= endLine; line++) {
+                try {
+                    // Get the document offset at the start of this line
+                    int lineStartOffset = textArea.getLineStartOffset(line - 1);
+                    
+                    // Use modelToView2D to get the exact rectangle where this line is rendered
+                    Rectangle2D viewRect = textArea.modelToView2D(lineStartOffset);
+                    
+                    // Step 4: Use the Y coordinate (adjusted for ascent) to draw the line number
+                    int y = (int) viewRect.getY();
+                    
+                    // Highlight current line
+                    if (line == currentLine) {
+                        g.setColor(new Color(220, 220, 220));
+                        g.fillRect(0, y - clip.y, getWidth(), lineHeight);
+                    }
 
-        if (startLine < 1) startLine = 1;
-
-        // Draw line numbers
-        for (int line = startLine; line <= endLine; line++) {
-            // Calculate Y position with matching insets
-            int y = topInset + (line - 1) * lineHeight - visibleRect.y;
-
-            // Highlight current line
-            if (line == currentLine) {
-                g.setColor(new Color(220, 220, 220));
-                g.fillRect(0, y, getWidth(), lineHeight);
+                    // Draw line number at the exact Y position of the text line
+                    g.setColor(Color.DARK_GRAY);
+                    String lineNum = String.valueOf(line);
+                    int x = getWidth() - textFm.stringWidth(lineNum) - 8;
+                    // Adjust Y for panel coordinate space and add ascent for baseline alignment
+                    g.drawString(lineNum, x, y - clip.y + ascent);
+                    
+                } catch (BadLocationException ex) {
+                    // Skip this line if we can't determine its position
+                    continue;
+                }
             }
-
-            // Draw line number using textArea's FontMetrics for perfect alignment
-            g.setColor(Color.DARK_GRAY);
-            String lineNum = String.valueOf(line);
-            int x = getWidth() - textFm.stringWidth(lineNum) - 8;
-            g.drawString(lineNum, x, y + ascent);
+        } catch (BadLocationException ex) {
+            // If we can't determine the visible range, fall back to drawing nothing
+            // or handle the error as appropriate
         }
     }
     
