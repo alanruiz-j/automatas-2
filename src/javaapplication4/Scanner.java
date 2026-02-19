@@ -345,9 +345,49 @@ public class Scanner {
     private void identifier() {
         while (isAlphaNumeric(peek())) advance();
         
+        // Check if the next character is a valid delimiter
+        char nextChar = peek();
+        if (!isValidDelimiter(nextChar)) {
+            // Invalid character follows - consume it and create error token
+            advance();
+            String errorText = source.substring(start, current);
+            addError("Identificador invalido: caracter no permitido '" + nextChar + "' despues del identificador");
+            return;
+        }
+        
         String text = source.substring(start, current);
         TokenType type = reservedWords.getOrDefault(text, TokenType.IDENTIFICADOR);
         addToken(type);
+    }
+    
+    private boolean isValidDelimiter(char c) {
+        // Valid characters that can follow an identifier:
+        // Whitespace, EOF, assignment, arithmetic, grouping, punctuation, comparison, logical operators
+        return c == '\0' ||           // EOF
+               c == ' ' ||            // Space
+               c == '\t' ||           // Tab
+               c == '\n' ||           // Newline
+               c == '\r' ||           // Carriage return
+               c == '=' ||            // Assignment or comparison start
+               c == '+' ||            // Arithmetic
+               c == '-' ||            // Arithmetic
+               c == '*' ||            // Arithmetic
+               c == '/' ||            // Arithmetic or comment start
+               c == '(' ||            // Grouping
+               c == ')' ||            // Grouping
+               c == '[' ||            // Grouping
+               c == ']' ||            // Grouping
+               c == '{' ||            // Grouping
+               c == '}' ||            // Grouping
+               c == ';' ||            // Punctuation
+               c == ',' ||            // Punctuation
+               c == '<' ||            // Comparison
+               c == '>' ||            // Comparison
+               c == '!' ||            // Logical or comparison
+               c == '&' ||            // Logical
+               c == '|' ||            // Logical
+               c == '"' ||            // String literal start
+               c == '\'';             // Char literal start
     }
     
     private void skipMultiLineComment() {

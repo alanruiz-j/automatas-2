@@ -32,7 +32,7 @@ public class Parser {
         try {
             ast = parseProgram();
             if (!isAtEnd()) {
-                error("Unexpected tokens after program end", peek());
+                error("Tokens inesperados después del fin del programa", peek());
             }
             return ast;
         } catch (ParseException e) {
@@ -60,19 +60,24 @@ public class Parser {
         
         // Expect 'structure'
         if (!match(TokenType.PALABRA_RESERVADA, "structure")) {
-            error("Expected 'structure' keyword at program start", peek());
+            error("Se esperaba la palabra clave 'structure' al inicio del programa", peek());
             return null;
         }
         // 'structure' already consumed by match()
         
         // Expect structure name (identifier)
-        Token nameToken = consume(TokenType.IDENTIFICADOR, "Expected structure name");
+        Token nameToken = consume(TokenType.IDENTIFICADOR, "Se esperaba nombre de estructura");
         if (nameToken != null) {
-            structure.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, nameToken));
+            // Strict check: structure name must be "Main"
+            if (!nameToken.getLexeme().equals("Main")) {
+                error("Se esperaba 'Main' como nombre de la estructura, pero se encontró '" + nameToken.getLexeme() + "'", nameToken);
+            } else {
+                structure.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, nameToken));
+            }
         }
         
         // Expect '('
-        consume(TokenType.APERTURA, "Expected '(' after structure name");
+        consume(TokenType.APERTURA, "Se esperaba '(' después del nombre de estructura");
         
         // Parse member list
         ASTNode members = parseMemberList();
@@ -81,7 +86,7 @@ public class Parser {
         }
         
         // Expect ')'
-        consume(TokenType.CIERRE, "Expected ')' to close structure");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar la estructura");
         
         return structure;
     }
@@ -112,7 +117,7 @@ public class Parser {
                 members.addChild(member);
             } else {
                 // Skip unknown token and continue
-                error("Unexpected token in structure body", peek());
+                error("Token inesperado en el cuerpo de la estructura", peek());
                 advance();
             }
         }
@@ -169,7 +174,7 @@ public class Parser {
         }
         
         // Expect 'const'
-        consume(TokenType.PALABRA_RESERVADA, "const", "Expected 'const' in function definition");
+        consume(TokenType.PALABRA_RESERVADA, "const", "Se esperaba 'const' en la definición de función");
         
         // Expect return type
         Token returnType = parseType();
@@ -186,7 +191,7 @@ public class Parser {
             // Other function names as identifiers
             funcName = consume(TokenType.IDENTIFICADOR);
         } else {
-            error("Expected function name (main or identifier)", peek());
+            error("Se esperaba nombre de función (main o identificador)", peek());
         }
         
         if (funcName != null) {
@@ -194,11 +199,11 @@ public class Parser {
         }
         
         // Expect '[' ']'
-        consume(TokenType.AGRUPADOR, "[", "Expected '[' after function name");
-        consume(TokenType.AGRUPADOR, "]", "Expected ']' after '['");
+        consume(TokenType.AGRUPADOR, "[", "Se esperaba '[' después del nombre de función");
+        consume(TokenType.AGRUPADOR, "]", "Se esperaba ']' después de '['");
         
         // Expect '('
-        consume(TokenType.APERTURA, "Expected '(' to start function body");
+        consume(TokenType.APERTURA, "Se esperaba '(' para iniciar el cuerpo de la función");
         
         // Parse statement list
         ASTNode body = parseStatementList();
@@ -207,7 +212,7 @@ public class Parser {
         }
         
         // Expect ')'
-        consume(TokenType.CIERRE, "Expected ')' to close function body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo de la función");
         
         return function;
     }
@@ -320,7 +325,7 @@ public class Parser {
         }
         
         // Unknown statement - skip and report error
-        error("Unexpected token in statement", token);
+        error("Token inesperado en la instrucción", token);
         advance();
         return null;
     }
@@ -338,7 +343,7 @@ public class Parser {
         }
         
         // Parse variable name
-        Token name = consume(TokenType.IDENTIFICADOR, "Expected variable name after type");
+        Token name = consume(TokenType.IDENTIFICADOR, "Se esperaba nombre de variable después del tipo");
         if (name != null) {
             declaration.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, name));
         }
@@ -352,7 +357,7 @@ public class Parser {
         }
         
         // Expect ';'
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after declaration");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la declaración");
         
         return declaration;
     }
@@ -363,19 +368,19 @@ public class Parser {
     private ASTNode parseAssignment() {
         ASTNode assignment = new ASTNode(ASTNode.NodeType.ASSIGNMENT);
         
-        Token name = consume(TokenType.IDENTIFICADOR, "Expected variable name");
+        Token name = consume(TokenType.IDENTIFICADOR, "Se esperaba nombre de variable");
         if (name != null) {
             assignment.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, name));
         }
         
-        consume(TokenType.OPERADOR_ASIGNACION, "Expected '=' in assignment");
+        consume(TokenType.OPERADOR_ASIGNACION, "Se esperaba '=' en la asignación");
         
         ASTNode expr = parseExpression();
         if (expr != null) {
             assignment.addChild(expr);
         }
         
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after assignment");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la asignación");
         
         return assignment;
     }
@@ -387,22 +392,22 @@ public class Parser {
         ASTNode ifStmt = new ASTNode(ASTNode.NodeType.IF_STATEMENT);
         
         // 'if' already consumed
-        consume(TokenType.APERTURA, "Expected '(' after 'if'");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'if'");
         
         ASTNode condition = parseExpression();
         if (condition != null) {
             ifStmt.addChild(condition);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' after if condition");
-        consume(TokenType.APERTURA, "Expected '(' to start if body");
+        consume(TokenType.CIERRE, "Se esperaba ')' después de la condición if");
+        consume(TokenType.APERTURA, "Se esperaba '(' para iniciar el cuerpo del if");
         
         ASTNode thenBranch = parseStatementList();
         if (thenBranch != null) {
             ifStmt.addChild(thenBranch);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' to close if body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del if");
         
         // Optional else or elseif
         if (match(TokenType.CONDICIONAL, "else")) {
@@ -427,11 +432,11 @@ public class Parser {
      */
     private ASTNode parseElsePart() {
         // 'else' already consumed
-        consume(TokenType.APERTURA, "Expected '(' after 'else'");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'else'");
         
         ASTNode elseBody = parseStatementList();
         
-        consume(TokenType.CIERRE, "Expected ')' to close else body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del else");
         
         return elseBody;
     }
@@ -443,22 +448,22 @@ public class Parser {
         ASTNode whileStmt = new ASTNode(ASTNode.NodeType.WHILE_STATEMENT);
         
         // 'while' already consumed
-        consume(TokenType.APERTURA, "Expected '(' after 'while'");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'while'");
         
         ASTNode condition = parseExpression();
         if (condition != null) {
             whileStmt.addChild(condition);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' after while condition");
-        consume(TokenType.APERTURA, "Expected '(' to start while body");
+        consume(TokenType.CIERRE, "Se esperaba ')' después de la condición while");
+        consume(TokenType.APERTURA, "Se esperaba '(' para iniciar el cuerpo del while");
         
         ASTNode body = parseStatementList();
         if (body != null) {
             whileStmt.addChild(body);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' to close while body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del while");
         
         return whileStmt;
     }
@@ -470,7 +475,7 @@ public class Parser {
         ASTNode forStmt = new ASTNode(ASTNode.NodeType.FOR_STATEMENT);
         
         // 'for' already consumed
-        consume(TokenType.APERTURA, "Expected '(' after 'for'");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'for'");
         
         // Initialization
         ASTNode init = parseAssignment();
@@ -484,7 +489,7 @@ public class Parser {
             forStmt.addChild(condition);
         }
         
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after for condition");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la condición del for");
         
         // Increment
         ASTNode increment = parseAssignment();
@@ -492,15 +497,15 @@ public class Parser {
             forStmt.addChild(increment);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' after for clauses");
-        consume(TokenType.APERTURA, "Expected '(' to start for body");
+        consume(TokenType.CIERRE, "Se esperaba ')' después de las cláusulas del for");
+        consume(TokenType.APERTURA, "Se esperaba '(' para iniciar el cuerpo del for");
         
         ASTNode body = parseStatementList();
         if (body != null) {
             forStmt.addChild(body);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' to close for body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del for");
         
         return forStmt;
     }
@@ -512,34 +517,34 @@ public class Parser {
         ASTNode tryCatch = new ASTNode(ASTNode.NodeType.TRY_CATCH);
         
         // 'try' already consumed
-        consume(TokenType.APERTURA, "Expected '(' after 'try'");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'try'");
         
         ASTNode tryBody = parseStatementList();
         if (tryBody != null) {
             tryCatch.addChild(tryBody);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' to close try body");
-        consume(TokenType.EXCEPCION, "catch", "Expected 'catch' after try block");
-        consume(TokenType.APERTURA, "Expected '(' after 'catch'");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del try");
+        consume(TokenType.EXCEPCION, "catch", "Se esperaba 'catch' después del bloque try");
+        consume(TokenType.APERTURA, "Se esperaba '(' después de 'catch'");
         
         ASTNode catchBody = parseStatementList();
         if (catchBody != null) {
             tryCatch.addChild(catchBody);
         }
         
-        consume(TokenType.CIERRE, "Expected ')' to close catch body");
+        consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del catch");
         
         // Optional finally
         if (match(TokenType.EXCEPCION, "finally")) {
-            consume(TokenType.APERTURA, "Expected '(' after 'finally'");
+            consume(TokenType.APERTURA, "Se esperaba '(' después de 'finally'");
             
             ASTNode finallyBody = parseStatementList();
             if (finallyBody != null) {
                 tryCatch.addChild(finallyBody);
             }
             
-            consume(TokenType.CIERRE, "Expected ')' to close finally body");
+            consume(TokenType.CIERRE, "Se esperaba ')' para cerrar el cuerpo del finally");
         }
         
         return tryCatch;
@@ -557,7 +562,7 @@ public class Parser {
             throwStmt.addChild(expr);
         }
         
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after throw statement");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la instrucción throw");
         
         return throwStmt;
     }
@@ -567,7 +572,7 @@ public class Parser {
      */
     private ASTNode parseBreakStatement() {
         ASTNode breakStmt = new ASTNode(ASTNode.NodeType.BREAK_STATEMENT, previous());
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after break");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de break");
         return breakStmt;
     }
     
@@ -576,7 +581,7 @@ public class Parser {
      */
     private ASTNode parseContinueStatement() {
         ASTNode continueStmt = new ASTNode(ASTNode.NodeType.CONTINUE_STATEMENT, previous());
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after continue");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de continue");
         return continueStmt;
     }
     
@@ -594,7 +599,7 @@ public class Parser {
             }
         }
         
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after return");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de return");
         return returnStmt;
     }
     
@@ -604,15 +609,15 @@ public class Parser {
     private ASTNode parsePrintStatement() {
         ASTNode printStmt = new ASTNode(ASTNode.NodeType.FUNCTION_CALL, previous());
         
-        consume(TokenType.AGRUPADOR, "[", "Expected '[' after 'print'");
+        consume(TokenType.AGRUPADOR, "[", "Se esperaba '[' después de 'print'");
         
         ASTNode args = parseExpressionList();
         if (args != null) {
             printStmt.addChild(args);
         }
         
-        consume(TokenType.AGRUPADOR, "]", "Expected ']' after print arguments");
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after print statement");
+        consume(TokenType.AGRUPADOR, "]", "Se esperaba ']' después de los argumentos de print");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la instrucción print");
         
         return printStmt;
     }
@@ -623,12 +628,12 @@ public class Parser {
     private ASTNode parseInputStatement() {
         ASTNode inputStmt = new ASTNode(ASTNode.NodeType.FUNCTION_CALL, previous());
         
-        Token varName = consume(TokenType.IDENTIFICADOR, "Expected variable name after 'input'");
+        Token varName = consume(TokenType.IDENTIFICADOR, "Se esperaba nombre de variable después de 'input'");
         if (varName != null) {
             inputStmt.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, varName));
         }
         
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after input statement");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la instrucción input");
         
         return inputStmt;
     }
@@ -638,7 +643,7 @@ public class Parser {
      */
     private ASTNode parseExpressionStatement() {
         ASTNode expr = parseExpression();
-        consume(TokenType.PUNTO_Y_COMA, "Expected ';' after expression");
+        consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la expresión");
         return expr;
     }
     
@@ -742,7 +747,7 @@ public class Parser {
         // Parenthesized expression
         if (match(TokenType.APERTURA, "(")) {
             ASTNode expr = parseExpression();
-            consume(TokenType.CIERRE, "Expected ')' after expression");
+            consume(TokenType.CIERRE, "Se esperaba ')' después de la expresión");
             return expr;
         }
         
@@ -754,7 +759,7 @@ public class Parser {
             return negation;
         }
         
-        error("Expected expression", peek());
+        error("Se esperaba una expresión", peek());
         return null;
     }
     
@@ -765,7 +770,7 @@ public class Parser {
         if (isType(peek())) {
             return advance();
         }
-        error("Expected type declaration", peek());
+        error("Se esperaba declaración de tipo", peek());
         return null;
     }
     
@@ -833,7 +838,7 @@ public class Parser {
     }
     
     private Token consume(TokenType type) {
-        return consume(type, "Expected token type: " + type.name());
+        return consume(type, "Se esperaba tipo de token: " + type.name());
     }
     
     private Token consume(TokenType type, String errorMessage) {
@@ -853,7 +858,7 @@ public class Parser {
         int line = token != null ? token.getLine() : 0;
         int column = token != null ? token.getColumn() : 0;
         
-        SyntaxError error = new SyntaxError(message, line, column, "see error message", found);
+        SyntaxError error = new SyntaxError(message, line, column, "ver mensaje de error", found);
         errors.add(error);
     }
     

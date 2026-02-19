@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  *
@@ -60,27 +62,45 @@ public class Archivos
         FileReader fr = null;
         BufferedReader br = null;
 
-        // Ruta relativa para la carpeta Datos
-        archivo = new File("Datos/archivo.txt");
-        try {
-            fr = new FileReader(archivo);
-            br = new BufferedReader(fr);
-            String linea;
+        // Create file chooser dialog
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Seleccionar archivo de texto");
+        
+        // Set default directory to Datos folder
+        File datosFolder = new File("Datos");
+        if (datosFolder.exists()) {
+            fileChooser.setCurrentDirectory(datosFolder);
+        }
+        
+        // Add filter for .txt files
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Archivos de texto (*.txt)", "txt");
+        fileChooser.setFileFilter(filter);
+        
+        // Show dialog
+        int result = fileChooser.showOpenDialog(null);
+        
+        if (result == JFileChooser.APPROVE_OPTION) {
+            archivo = fileChooser.getSelectedFile();
+            try {
+                fr = new FileReader(archivo);
+                br = new BufferedReader(fr);
+                String linea;
 
-            while ((linea = br.readLine()) != null) {
-                cadena = cadena + linea + "\n";
-            }
+                while ((linea = br.readLine()) != null) {
+                    cadena = cadena + linea + "\n";
+                }
 
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            if (fr != null) {
-                try {
-                    fr.close();
-                } catch (IOException ex) {
-                    Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                if (fr != null) {
+                    try {
+                        fr.close();
+                    } catch (IOException ex) {
+                        Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
         }
