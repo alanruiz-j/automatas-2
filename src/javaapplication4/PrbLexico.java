@@ -59,16 +59,15 @@ public class PrbLexico extends javax.swing.JFrame
      */
     private void setupLineNumbers()
     {
-        // Create line number panel
+        // Create line number panel - it will be attached to scroll pane as row header
         lineNumberPanel = new LineNumberPanel(TxAnalisis);
 
         // Set text area as the main viewport view
         jScrollPane1.setViewportView(TxAnalisis);
 
-        // Assign line number panel as RowHeaderView - Swing handles synchronization automatically
+        // Assign line number panel as RowHeaderView
+        // Swing automatically synchronizes scrolling between row header and viewport
         jScrollPane1.setRowHeaderView(lineNumberPanel);
-
-        // No manual AdjustmentListener needed - RowHeaderView is physically linked to viewport scrolling
     }
 
     /**

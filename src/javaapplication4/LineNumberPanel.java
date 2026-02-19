@@ -14,7 +14,8 @@ import java.awt.geom.Rectangle2D;
 
 /**
  * A panel that displays line numbers for a JTextArea.
- * Synchronizes scrolling and updates automatically.
+ * Designed to be used as a row header view in a JScrollPane.
+ * Automatically synchronizes scrolling with the text area.
  * Highlights the current line.
  * @author Gerardo
  */
@@ -37,33 +38,44 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
         textArea.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                updatePreferredWidth();
+                updatePreferredSize();
                 repaint();
             }
         });
 
-        // Set preferred width based on initial line count
-        updatePreferredWidth();
+        // Set preferred size based on initial content
+        updatePreferredSize();
     }
     
-    private void updatePreferredWidth() {
+    private void updatePreferredSize() {
         int lineCount = getLineCount();
         int digits = String.valueOf(lineCount).length();
         // Minimum 2 digits width
         digits = Math.max(digits, 2);
         
-        FontMetrics fm = getFontMetrics(getFont());
+        // Use text area's font metrics for consistency
+        FontMetrics fm = textArea.getFontMetrics(textArea.getFont());
         int charWidth = fm.charWidth('0');
         int width = charWidth * digits + 20; // 20px padding
         
-        // Use textArea's preferred size for proper height synchronization
-        setPreferredSize(new Dimension(width, textArea.getPreferredSize().height));
+        // Match height to text area's preferred size (not current height)
+        // This ensures all lines are accounted for
+        int height = textArea.getPreferredSize().height;
+        
+        setPreferredSize(new Dimension(width, height));
         revalidate();
         repaint();
     }
     
     private int getLineCount() {
-        return textArea.getLineCount();
+        String text = textArea.getText();
+        if (text.isEmpty()) return 1;
+        
+        int lines = 1;
+        for (char c : text.toCharArray()) {
+            if (c == '\n') lines++;
+        }
+        return lines;
     }
     
     @Override
@@ -74,29 +86,29 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                             RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 
-        // Use FontMetrics from the text area for consistent line height calculations
-        FontMetrics textFm = textArea.getFontMetrics(textArea.getFont());
-        int lineHeight = textFm.getHeight();
-        int ascent = textFm.getAscent();
+        // Use text area's font metrics for exact consistency
+        FontMetrics fm = textArea.getFontMetrics(textArea.getFont());
+        int lineHeight = fm.getHeight();
+        int ascent = fm.getAscent();
 
-        // Get the visible rectangle to determine which lines are currently visible
+        // Get the visible rectangle of the text area (accounts for scrolling)
         Rectangle visibleRect = textArea.getVisibleRect();
-
+        
         try {
-            // Use viewToModel to identify which range of text lines are visible
+            // Determine visible range using viewToModel on visible rectangle bounds
             int startOffset = textArea.viewToModel(new Point(0, visibleRect.y));
             int endOffset = textArea.viewToModel(new Point(0, visibleRect.y + visibleRect.height));
             
             // Convert offsets to line numbers
             int startLine = textArea.getLineOfOffset(startOffset) + 1;
             int endLine = textArea.getLineOfOffset(endOffset) + 1;
-            int totalLines = textArea.getLineCount();
+            int totalLines = getLineCount();
             
             // Ensure bounds are valid
             if (startLine < 1) startLine = 1;
             if (endLine > totalLines) endLine = totalLines;
 
-            // Iterate over visible lines using modelToView2D
+            // Iterate over visible lines
             for (int line = startLine; line <= endLine; line++) {
                 try {
                     // Get the document offset at the start of this line
@@ -105,8 +117,8 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
                     // Use modelToView2D to get the exact rectangle where this line is rendered
                     Rectangle2D viewRect = textArea.modelToView2D(lineStartOffset);
                     
-                    // Simplify coordinate calculation by using modelToView2D() Y directly
-                    // The Y coordinate is relative to the text area, which matches our row header
+                    // Get the Y position - since this panel is in the row header view,
+                    // it scrolls with the text area, so we use the Y directly
                     int y = (int) viewRect.getY();
                     
                     // Highlight current line
@@ -118,8 +130,8 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
                     // Draw line number at the exact Y position of the text line
                     g.setColor(Color.DARK_GRAY);
                     String lineNum = String.valueOf(line);
-                    int x = getWidth() - textFm.stringWidth(lineNum) - 8;
-                    // Add ascent for proper baseline alignment
+                    int x = getWidth() - fm.stringWidth(lineNum) - 8;
+                    // Add ascent for baseline alignment
                     g.drawString(lineNum, x, y + ascent);
                     
                 } catch (BadLocationException ex) {
@@ -135,19 +147,19 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
     // DocumentListener methods
     @Override
     public void insertUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     
     @Override
     public void removeUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     
     @Override
     public void changedUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     
