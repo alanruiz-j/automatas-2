@@ -5,9 +5,11 @@
 package javaapplication4;
 
 import javax.swing.table.DefaultTableModel;
-import javax.swing.JPanel;
-import java.awt.BorderLayout;
 import java.util.List;
+// Uncomment these imports after adding RSyntaxTextArea library to project:
+// import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+// import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+// import org.fife.ui.rtextarea.RTextScrollPane;
 
 /**
  *
@@ -52,28 +54,67 @@ public class PrbLexico extends javax.swing.JFrame
     }
 
     /**
-     * Setup line numbers for the text editor
+     * Setup line numbers for the text editor using Swing's native RowHeaderView
+     * This creates a physical link between the line numbers and text area scrolling
      */
     private void setupLineNumbers()
     {
-        // Create a panel to hold both line numbers and text area
-        JPanel editorPanel = new JPanel(new BorderLayout());
-        editorPanel.setBackground(TxAnalisis.getBackground());
+        // Create line number panel - it will be attached to scroll pane as row header
+        lineNumberPanel = new LineNumberPanel(TxAnalisis);
 
-        // Create line number panel
-        lineNumberPanel = new LineNumberPanel(TxAnalisis, jScrollPane1);
+        // Set text area as the main viewport view
+        jScrollPane1.setViewportView(TxAnalisis);
 
-        // Add line numbers on the left, text area on the right
-        editorPanel.add(lineNumberPanel, BorderLayout.WEST);
-        editorPanel.add(TxAnalisis, BorderLayout.CENTER);
+        // Assign line number panel as RowHeaderView
+        // Swing automatically synchronizes scrolling between row header and viewport
+        jScrollPane1.setRowHeaderView(lineNumberPanel);
+    }
 
-        // Set the viewport of the scroll pane to our composite panel
-        jScrollPane1.setViewportView(editorPanel);
-
-        // Sync vertical scrolling
-        jScrollPane1.getVerticalScrollBar().addAdjustmentListener(e -> {
-            lineNumberPanel.repaint();
-        });
+    /**
+     * Configures the editor with RSyntaxTextArea for syntax highlighting.
+     * Call this method in the constructor after initComponents().
+     * 
+     * IMPORTANT: You must add the RSyntaxTextArea library to your project first:
+     * 1. Download rsyntaxtextarea-3.x.x.jar from https://github.com/bobbylight/RSyntaxTextArea/releases
+     * 2. In NetBeans: Right-click project → Properties → Libraries → Compile → Add JAR/Folder
+     * 3. Uncomment the imports at the top of this file
+     * 4. Uncomment this method's body
+     */
+    private void configureEditor() {
+        /* Uncomment this entire method body after adding the library:
+        
+        // Store reference to parent container and current bounds
+        Container parent = jScrollPane1.getParent();
+        java.awt.Rectangle bounds = jScrollPane1.getBounds();
+        
+        // Remove the old scroll pane from its parent
+        parent.remove(jScrollPane1);
+        
+        // Create new RSyntaxTextArea with Java syntax highlighting
+        RSyntaxTextArea newTextArea = new RSyntaxTextArea();
+        newTextArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+        newTextArea.setCodeFoldingEnabled(true);
+        newTextArea.setAntiAliasingEnabled(true);
+        newTextArea.setText(TxAnalisis.getText()); // Preserve existing text
+        newTextArea.setFont(TxAnalisis.getFont()); // Preserve font settings
+        
+        // Create RTextScrollPane (includes line numbers automatically)
+        RTextScrollPane newScrollPane = new RTextScrollPane(newTextArea);
+        newScrollPane.setBounds(bounds);
+        
+        // Add new scroll pane to parent
+        parent.add(newScrollPane);
+        parent.revalidate();
+        parent.repaint();
+        
+        // Reassign the reference so all existing logic continues to work
+        TxAnalisis = newTextArea;
+        jScrollPane1 = newScrollPane;
+        
+        // Remove the old line number panel since RTextScrollPane handles this natively
+        lineNumberPanel = null;
+        
+        */
     }
 
     /**
@@ -373,9 +414,9 @@ public class PrbLexico extends javax.swing.JFrame
         if (hasLexicalErrors) {
             syntaxErrorModel.addRow(new Object[]{
                 "-", "-", 
-                "Fix lexical errors before syntactic analysis", 
-                "Valid tokens", 
-                "Lexical errors found"
+                "Corrija los errores léxicos antes del análisis sintáctico", 
+                "Tokens válidos", 
+                "Errores léxicos encontrados"
             });
             return;
         }
@@ -389,7 +430,7 @@ public class PrbLexico extends javax.swing.JFrame
             syntaxErrorModel.setRowCount(0);
             syntaxErrorModel.addRow(new Object[]{
                 "✓", "✓", 
-                "Syntactic analysis completed successfully!", 
+                "¡Analisis sintactico sin errores!", 
                 "-", 
                 "-"
             });
