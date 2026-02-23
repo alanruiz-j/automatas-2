@@ -2,6 +2,7 @@
 structure Main (
     public const void main [ ] (
         int x;
+        int y;
         x = 10;
         y = 20;
         
@@ -12,10 +13,11 @@ structure Main (
         )
         
         while (x < y) (
+int s;
             x = x + 1;
             print[x];
         )
-        
+        s=10;
         try (
             print["Inside try block"];
         ) catch (
