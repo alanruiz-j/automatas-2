@@ -2,6 +2,7 @@
  * Analisis_Semantico - Semantic analysis for assignment statements
  * Step 1: Validates that identifiers exist in the symbol table
  * Step 2: Validates that identifiers are in accessible scope
+ * Step 3: Validates that identifiers are modifiable (not constant)
  */
 package javaapplication4;
 
@@ -88,6 +89,39 @@ public class Analisis_Semantico {
     }
     
     /**
+     * STEP 3: Validates that a declared identifier is modifiable.
+     * Checks that the variable is not declared as constant (const).
+     * 
+     * Constants cannot be reassigned after initialization.
+     * 
+     * @param identifierName The name of the identifier on the left-hand side
+     * @param table Reference to the symbol table with constant information
+     * @return true if the identifier is mutable, false if it's constant
+     */
+    public boolean validarModificabilidadAsignacion(String identifierName, SymbolTable table) {
+        if (identifierName == null || identifierName.isEmpty()) {
+            return false;
+        }
+        
+        if (!table.contains(identifierName)) {
+            return false;
+        }
+        
+        if (table.isConstant(identifierName)) {
+            SemanticError error = new SemanticError(
+                identifierName,
+                "La variable '" + identifierName + "' es una constante y no puede ser modificada",
+                0,
+                0
+            );
+            errors.add(error);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
      * Performs semantic analysis on the AST.
      * First pass: builds symbol table from DECLARATION nodes with scope tracking.
      * Second pass: validates ASSIGNMENTS using both step 1 and step 2.
@@ -116,17 +150,19 @@ public class Analisis_Semantico {
      * Tracks scope levels:
      * - Level 0: Function body (global to function)
      * - Level 1+: Nested blocks (if, while, for, try, etc.)
+     * Also tracks whether variables are constant.
      */
     private void buildSymbolTable(ASTNode node) {
         if (node == null) return;
         
         if (node.getType() == ASTNode.NodeType.DECLARATION) {
+            boolean isConst = node.isConstant();
             for (int i = 0; i < node.getChildCount(); i++) {
                 ASTNode child = node.getChild(i);
                 if (child.getType() == ASTNode.NodeType.IDENTIFIER) {
                     String identifierName = child.getValue();
                     if (identifierName != null) {
-                        symbolTable.addInCurrentScope(identifierName);
+                        symbolTable.addInCurrentScope(identifierName, isConst);
                     }
                 }
             }
@@ -158,9 +194,10 @@ public class Analisis_Semantico {
     
     /**
      * Second pass: Validate all assignment statements.
-     * Performs both:
+     * Performs:
      * - Step 1: Validate identifier exists in symbol table
      * - Step 2: Validate identifier is in accessible scope
+     * - Step 3: Validate identifier is modifiable (not constant)
      */
     private void validateAssignments(ASTNode node) {
         if (node == null) return;
@@ -185,6 +222,18 @@ public class Analisis_Semantico {
                                 identifierNode.getColumn()
                             );
                             errors.add(error);
+                        } else {
+                            boolean step3Valid = validarModificabilidadAsignacion(identifierName, symbolTable);
+                            
+                            if (!step3Valid) {
+                                SemanticError error = new SemanticError(
+                                    identifierName,
+                                    "La variable '" + identifierName + "' es una constante y no puede ser modificada",
+                                    identifierNode.getLine(),
+                                    identifierNode.getColumn()
+                                );
+                                errors.add(error);
+                            }
                         }
                     } else {
                         SemanticError error = new SemanticError(

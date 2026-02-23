@@ -51,6 +51,7 @@ public class ASTNode {
     private int line;
     private int column;
     private String value;
+    private boolean isConstant;
     
     public ASTNode(NodeType type) {
         this.type = type;
@@ -58,6 +59,7 @@ public class ASTNode {
         this.line = 0;
         this.column = 0;
         this.value = null;
+        this.isConstant = false;
     }
     
     public ASTNode(NodeType type, Token token) {
@@ -67,6 +69,7 @@ public class ASTNode {
         this.line = token != null ? token.getLine() : 0;
         this.column = token != null ? token.getColumn() : 0;
         this.value = token != null ? token.getLexeme() : null;
+        this.isConstant = false;
     }
     
     public ASTNode(NodeType type, String value, int line, int column) {
@@ -75,6 +78,7 @@ public class ASTNode {
         this.line = line;
         this.column = column;
         this.children = new ArrayList<>();
+        this.isConstant = false;
     }
     
     public NodeType getType() {
@@ -141,6 +145,14 @@ public class ASTNode {
     
     public void setValue(String value) {
         this.value = value;
+    }
+    
+    public boolean isConstant() {
+        return isConstant;
+    }
+    
+    public void setConstant(boolean isConstant) {
+        this.isConstant = isConstant;
     }
     
     public boolean isError() {

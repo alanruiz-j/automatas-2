@@ -2,10 +2,8 @@
 structure Main (
     public const void main [ ] (
         int x;
-        int y;
-        x = 10;
-        y = 20;
-        
+        const int y = 20;
+        x=5;
         if (x > 5) (
             print["x is greater than 5"];
         ) else (
@@ -13,11 +11,10 @@ structure Main (
         )
         
         while (x < y) (
-int s;
             x = x + 1;
             print[x];
         )
-        s=10;
+        
         try (
             print["Inside try block"];
         ) catch (

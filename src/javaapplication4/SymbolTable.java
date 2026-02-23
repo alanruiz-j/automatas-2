@@ -11,12 +11,14 @@ import java.util.Set;
 public class SymbolTable {
     private Set<String> identifiers;
     private Map<String, Integer> identifierScopes;
+    private Map<String, Boolean> constantIdentifiers;
     private int currentScope;
     private Set<Integer> globalScopes;
     
     public SymbolTable() {
         this.identifiers = new HashSet<>();
         this.identifierScopes = new HashMap<>();
+        this.constantIdentifiers = new HashMap<>();
         this.currentScope = 0;
         this.globalScopes = new HashSet<>();
     }
@@ -26,16 +28,26 @@ public class SymbolTable {
     }
     
     public void addInCurrentScope(String identifier) {
+        addInCurrentScope(identifier, false);
+    }
+    
+    public void addInCurrentScope(String identifier, boolean isConstant) {
         if (identifier != null && !identifier.isEmpty()) {
             identifiers.add(identifier);
             identifierScopes.put(identifier, currentScope);
+            constantIdentifiers.put(identifier, isConstant);
         }
     }
     
     public void addAsGlobal(String identifier) {
+        addAsGlobal(identifier, false);
+    }
+    
+    public void addAsGlobal(String identifier, boolean isConstant) {
         if (identifier != null && !identifier.isEmpty()) {
             identifiers.add(identifier);
             identifierScopes.put(identifier, 0);
+            constantIdentifiers.put(identifier, isConstant);
             globalScopes.add(0);
         }
     }
@@ -68,6 +80,14 @@ public class SymbolTable {
         return declScope > fromScope;
     }
     
+    public boolean isConstant(String identifier) {
+        return constantIdentifiers.getOrDefault(identifier, false);
+    }
+    
+    public boolean isMutable(String identifier) {
+        return !isConstant(identifier);
+    }
+    
     public void enterScope() {
         currentScope++;
     }
@@ -95,6 +115,7 @@ public class SymbolTable {
     public void clear() {
         identifiers.clear();
         identifierScopes.clear();
+        constantIdentifiers.clear();
         currentScope = 0;
         globalScopes.clear();
     }
