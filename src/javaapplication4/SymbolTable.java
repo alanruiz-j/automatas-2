@@ -12,6 +12,7 @@ public class SymbolTable {
     private Set<String> identifiers;
     private Map<String, Integer> identifierScopes;
     private Map<String, Boolean> constantIdentifiers;
+    private Map<String, DataType> identifierTypes;
     private int currentScope;
     private Set<Integer> globalScopes;
     
@@ -19,6 +20,7 @@ public class SymbolTable {
         this.identifiers = new HashSet<>();
         this.identifierScopes = new HashMap<>();
         this.constantIdentifiers = new HashMap<>();
+        this.identifierTypes = new HashMap<>();
         this.currentScope = 0;
         this.globalScopes = new HashSet<>();
     }
@@ -28,26 +30,46 @@ public class SymbolTable {
     }
     
     public void addInCurrentScope(String identifier) {
-        addInCurrentScope(identifier, false);
+        addInCurrentScope(identifier, false, DataType.UNKNOWN);
     }
     
     public void addInCurrentScope(String identifier, boolean isConstant) {
+        addInCurrentScope(identifier, isConstant, DataType.UNKNOWN);
+    }
+    
+    public void addInCurrentScope(String identifier, boolean isConstant, String type) {
+        DataType dt = (type != null) ? DataType.fromString(type) : DataType.UNKNOWN;
+        addInCurrentScope(identifier, isConstant, dt);
+    }
+    
+    public void addInCurrentScope(String identifier, boolean isConstant, DataType type) {
         if (identifier != null && !identifier.isEmpty()) {
             identifiers.add(identifier);
             identifierScopes.put(identifier, currentScope);
             constantIdentifiers.put(identifier, isConstant);
+            identifierTypes.put(identifier, type);
         }
     }
     
     public void addAsGlobal(String identifier) {
-        addAsGlobal(identifier, false);
+        addAsGlobal(identifier, false, DataType.UNKNOWN);
     }
     
     public void addAsGlobal(String identifier, boolean isConstant) {
+        addAsGlobal(identifier, isConstant, DataType.UNKNOWN);
+    }
+    
+    public void addAsGlobal(String identifier, boolean isConstant, String type) {
+        DataType dt = (type != null) ? DataType.fromString(type) : DataType.UNKNOWN;
+        addAsGlobal(identifier, isConstant, dt);
+    }
+    
+    private void addAsGlobal(String identifier, boolean isConstant, DataType type) {
         if (identifier != null && !identifier.isEmpty()) {
             identifiers.add(identifier);
             identifierScopes.put(identifier, 0);
             constantIdentifiers.put(identifier, isConstant);
+            identifierTypes.put(identifier, type);
             globalScopes.add(0);
         }
     }
@@ -88,6 +110,10 @@ public class SymbolTable {
         return !isConstant(identifier);
     }
     
+    public DataType getType(String identifier) {
+        return identifierTypes.getOrDefault(identifier, DataType.UNKNOWN);
+    }
+    
     public void enterScope() {
         currentScope++;
     }
@@ -116,6 +142,7 @@ public class SymbolTable {
         identifiers.clear();
         identifierScopes.clear();
         constantIdentifiers.clear();
+        identifierTypes.clear();
         currentScope = 0;
         globalScopes.clear();
     }

@@ -3,6 +3,7 @@
  * Step 1: Validates that identifiers exist in the symbol table
  * Step 2: Validates that identifiers are in accessible scope
  * Step 3: Validates that identifiers are modifiable (not constant)
+ * Step 4: Validates type compatibility between LHS and RHS
  */
 package javaapplication4;
 
@@ -122,6 +123,144 @@ public class Analisis_Semantico {
     }
     
     /**
+     * STEP 4: Validates type compatibility between the variable and the expression.
+     * Strictly compares the declared type of the variable with the inferred type
+     * of the expression on the right-hand side. No implicit conversions or promotions
+     * are allowed.
+     * 
+     * @param identifierName The name of the identifier on the left-hand side
+     * @param expressionNode The AST node representing the expression on the right-hand side
+     * @param table Reference to the symbol table with type information
+     * @return true if types match exactly, false if there's a type mismatch
+     */
+    public boolean validarTiposAsignacion(String identifierName, ASTNode expressionNode, SymbolTable table) {
+        if (identifierName == null || identifierName.isEmpty() || expressionNode == null) {
+            return false;
+        }
+        
+        if (!table.contains(identifierName)) {
+            return false;
+        }
+        
+        DataType declaredType = table.getType(identifierName);
+        DataType expressionType = inferExpressionType(expressionNode, table);
+        
+        if (declaredType == null || expressionType == null || 
+            declaredType == DataType.UNKNOWN || expressionType == DataType.UNKNOWN) {
+            return false;
+        }
+        
+        if (declaredType != expressionType) {
+            SemanticError error = new SemanticError(
+                identifierName,
+                "Tipo incompatible: se esperaba '" + declaredType.getTypeName() + "' pero se obtuvo '" + expressionType.getTypeName() + "'",
+                0,
+                0
+            );
+            errors.add(error);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Infers the type of an expression node.
+     * Handles identifiers, literals, and binary expressions.
+     * 
+     * @param node The expression node to analyze
+     * @param table Reference to the symbol table
+     * @return The inferred DataType, or DataType.UNKNOWN if cannot be determined
+     */
+    private DataType inferExpressionType(ASTNode node, SymbolTable table) {
+        if (node == null) {
+            return DataType.UNKNOWN;
+        }
+        
+        switch (node.getType()) {
+            case IDENTIFIER:
+                return table.getType(node.getValue());
+                
+            case NUMBER_LITERAL:
+                return inferNumericLiteralType(node);
+                
+            case STRING_LITERAL:
+                return DataType.STRING;
+                
+            case CHAR_LITERAL:
+                return DataType.CHAR;
+                
+            case BOOL_LITERAL:
+                return DataType.BOOL;
+                
+            case EXPRESSION:
+            case TERM:
+                return inferBinaryExpressionType(node, table);
+                
+            default:
+                return DataType.UNKNOWN;
+        }
+    }
+    
+    /**
+     * Infers the type of a numeric literal based on its value.
+     * 
+     * @param node The numeric literal node
+     * @return The inferred DataType (INT, FLOAT, DOUBLE, or NUMBER)
+     */
+    private DataType inferNumericLiteralType(ASTNode node) {
+        if (node == null || node.getValue() == null) {
+            return DataType.NUMBER;
+        }
+        
+        String value = node.getValue();
+        
+        if (value.contains(".") || value.contains("e") || value.contains("E")) {
+            if (value.toLowerCase().endsWith("f")) {
+                return DataType.FLOAT;
+            }
+            return DataType.DOUBLE;
+        }
+        
+        try {
+            Long.parseLong(value);
+            return DataType.INT;
+        } catch (NumberFormatException e) {
+            return DataType.NUMBER;
+        }
+    }
+    
+    /**
+     * Infers the type of a binary expression.
+     * Strict rule: both operands must have exactly the same DataType.
+     * 
+     * @param node The binary expression node
+     * @param table Reference to the symbol table
+     * @return The result DataType, or DataType.UNKNOWN if types don't match
+     */
+    private DataType inferBinaryExpressionType(ASTNode node, SymbolTable table) {
+        if (node.getChildCount() < 2) {
+            return DataType.UNKNOWN;
+        }
+        
+        ASTNode left = node.getChild(0);
+        ASTNode right = node.getChild(1);
+        
+        DataType leftType = inferExpressionType(left, table);
+        DataType rightType = inferExpressionType(right, table);
+        
+        if (leftType == DataType.UNKNOWN || rightType == DataType.UNKNOWN) {
+            return DataType.UNKNOWN;
+        }
+        
+        if (leftType != rightType) {
+            return DataType.UNKNOWN;
+        }
+        
+        return leftType;
+    }
+    
+    /**
      * Performs semantic analysis on the AST.
      * First pass: builds symbol table from DECLARATION nodes with scope tracking.
      * Second pass: validates ASSIGNMENTS using both step 1 and step 2.
@@ -150,19 +289,20 @@ public class Analisis_Semantico {
      * Tracks scope levels:
      * - Level 0: Function body (global to function)
      * - Level 1+: Nested blocks (if, while, for, try, etc.)
-     * Also tracks whether variables are constant.
+     * Also tracks whether variables are constant and their type.
      */
     private void buildSymbolTable(ASTNode node) {
         if (node == null) return;
         
         if (node.getType() == ASTNode.NodeType.DECLARATION) {
             boolean isConst = node.isConstant();
+            DataType varType = node.getDataType();
             for (int i = 0; i < node.getChildCount(); i++) {
                 ASTNode child = node.getChild(i);
                 if (child.getType() == ASTNode.NodeType.IDENTIFIER) {
                     String identifierName = child.getValue();
                     if (identifierName != null) {
-                        symbolTable.addInCurrentScope(identifierName, isConst);
+                        symbolTable.addInCurrentScope(identifierName, isConst, varType);
                     }
                 }
             }
@@ -198,6 +338,7 @@ public class Analisis_Semantico {
      * - Step 1: Validate identifier exists in symbol table
      * - Step 2: Validate identifier is in accessible scope
      * - Step 3: Validate identifier is modifiable (not constant)
+     * - Step 4: Validate type compatibility between LHS and RHS
      */
     private void validateAssignments(ASTNode node) {
         if (node == null) return;
@@ -233,6 +374,21 @@ public class Analisis_Semantico {
                                     identifierNode.getColumn()
                                 );
                                 errors.add(error);
+                            } else {
+                                if (node.getChildCount() > 1) {
+                                    ASTNode expressionNode = node.getChild(1);
+                                    boolean step4Valid = validarTiposAsignacion(identifierName, expressionNode, symbolTable);
+                                    
+                                    if (!step4Valid) {
+                                        SemanticError error = new SemanticError(
+                                            identifierName,
+                                            "Tipo incompatible en la asignacion",
+                                            identifierNode.getLine(),
+                                            identifierNode.getColumn()
+                                        );
+                                        errors.add(error);
+                                    }
+                                }
                             }
                         }
                     } else {

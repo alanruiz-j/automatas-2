@@ -345,8 +345,11 @@ public class Parser {
         
         // Parse type
         Token typeToken = parseType();
+        String typeName = null;
         if (typeToken != null) {
+            typeName = typeToken.getLexeme();
             declaration.addChild(new ASTNode(ASTNode.NodeType.TYPE, typeToken));
+            declaration.setDataType(typeName);
         }
         
         // Parse variable name
