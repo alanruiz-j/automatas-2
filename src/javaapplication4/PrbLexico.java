@@ -378,7 +378,11 @@ public class PrbLexico extends javax.swing.JFrame
     private void BtnCargarMouseClicked(java.awt.event.MouseEvent evt)//GEN-FIRST:event_BtnCargarMouseClicked
     {//GEN-HEADEREND:event_BtnCargarMouseClicked
         BtnGenera.setEnabled(true);
+        BtnSintactico.setEnabled(false);
+        BtnSemantico.setEnabled(false);
         mt.setRowCount(0);
+        syntaxErrorModel.setRowCount(0);
+        semanticErrorModel.setRowCount(0);
         TxAnalisis.setText(Archivos.cargarArchivo());
     }//GEN-LAST:event_BtnCargarMouseClicked
 

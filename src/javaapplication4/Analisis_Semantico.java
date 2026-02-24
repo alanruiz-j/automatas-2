@@ -176,6 +176,68 @@ public class Analisis_Semantico {
     }
     
     /**
+     * Validates that all identifiers in an expression exist in the symbol table AND are in accessible scope.
+     * This is called to validate variables used in expressions (RHS of assignments).
+     * 
+     * @param node The expression node to validate
+     * @param currentScope The current scope level where the expression is being evaluated
+     * @param table Reference to the symbol table
+     * @return true if all identifiers exist and are accessible, false otherwise
+     */
+    private boolean validateExpressionScope(ASTNode node, int currentScope, SymbolTable table) {
+        if (node == null) {
+            return true;
+        }
+        
+        switch (node.getType()) {
+            case IDENTIFIER:
+                String identifierName = node.getValue();
+                if (identifierName != null) {
+                    if (!table.contains(identifierName)) {
+                        SemanticError error = new SemanticError(
+                            identifierName,
+                            "La variable '" + identifierName + "' no ha sido declarada",
+                            node.getLine(),
+                            node.getColumn()
+                        );
+                        errors.add(error);
+                        return false;
+                    }
+                    int declScope = table.getScopeLevel(identifierName);
+                    if (declScope > currentScope) {
+                        SemanticError error = new SemanticError(
+                            identifierName,
+                            "La variable '" + identifierName + "' esta fuera de alcance (declarada en un bloque interno)",
+                            node.getLine(),
+                            node.getColumn()
+                        );
+                        errors.add(error);
+                        return false;
+                    }
+                }
+                return true;
+                
+            case NUMBER_LITERAL:
+            case STRING_LITERAL:
+            case CHAR_LITERAL:
+            case BOOL_LITERAL:
+                return true;
+                
+            case EXPRESSION:
+            case TERM:
+                for (ASTNode child : node.getChildren()) {
+                    if (!validateExpressionScope(child, currentScope, table)) {
+                        return false;
+                    }
+                }
+                return true;
+                
+            default:
+                return true;
+        }
+    }
+    
+    /**
      * Infers the type of an expression node.
      * Handles identifiers, literals, and binary expressions.
      * 
@@ -563,16 +625,20 @@ public class Analisis_Semantico {
                             } else {
                                 if (node.getChildCount() > 1) {
                                     ASTNode expressionNode = node.getChild(1);
-                                    boolean step4Valid = validarTiposAsignacion(identifierName, expressionNode, symbolTable);
+                                    boolean exprScopeValid = validateExpressionScope(expressionNode, currentScope, symbolTable);
                                     
-                                    if (!step4Valid) {
-                                        SemanticError error = new SemanticError(
-                                            identifierName,
-                                            "Tipo incompatible en la asignacion",
-                                            identifierNode.getLine(),
-                                            identifierNode.getColumn()
-                                        );
-                                        errors.add(error);
+                                    if (exprScopeValid) {
+                                        boolean step4Valid = validarTiposAsignacion(identifierName, expressionNode, symbolTable);
+
+                                        if (!step4Valid) {
+                                            SemanticError error = new SemanticError(
+                                                identifierName,
+                                                "Tipo incompatible en la asignacion",
+                                                identifierNode.getLine(),
+                                                identifierNode.getColumn()
+                                            );
+                                            errors.add(error);
+                                        }
                                     }
                                 }
                             }
