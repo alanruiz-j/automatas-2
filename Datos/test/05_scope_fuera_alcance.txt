@@ -13,4 +13,3 @@ structure Main (
         resultado = variableInterna;
     )
 )
-
