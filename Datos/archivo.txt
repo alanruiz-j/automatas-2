@@ -1,10 +1,14 @@
 // Codigo de prueba con ciclos y try
 structure Main (
     public const void main [ ] (
-        string x;
+        int x;
         int y;
-        x = 5;
-        y = 20;
+bool b;
+string c;
+b=2;
+c="hola";
+        x = 10;
+        y = x+b*c;
         
         if (x > 5) (
             print["x is greater than 5"];

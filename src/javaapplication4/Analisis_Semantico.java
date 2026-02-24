@@ -4,6 +4,7 @@
  * Step 2: Validates that identifiers are in accessible scope
  * Step 3: Validates that identifiers are modifiable (not constant)
  * Step 4: Validates type compatibility between LHS and RHS
+ * Step 5: Validates binary expression type compatibility
  */
 package javaapplication4;
 
@@ -11,6 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Analisis_Semantico {
+    
+    private enum OperatorCategory {
+        ARITHMETIC,  // +, -, *, /
+        LOGICAL,     // &&, ||
+        RELATIONAL,  // <, >, <=, >=
+        EQUALITY     // ==, !=
+    }
     private SymbolTable symbolTable;
     private List<SemanticError> errors;
     private boolean success;
@@ -231,12 +239,17 @@ public class Analisis_Semantico {
     }
     
     /**
-     * Infers the type of a binary expression.
-     * Strict rule: both operands must have exactly the same DataType.
+     * Infers the type of a binary expression with strict operator-operand validation.
+     * 
+     * Rules:
+     * - Arithmetic (+,-,*,/): both operands must be same numeric type, result is that type
+     * - Logical (&&,||): both operands must be BOOL, result is BOOL
+     * - Relational (<,>,<=,>=): both operands must be same numeric type, result is BOOL
+     * - Equality (==,!=): both operands must be same type, result is BOOL
      * 
      * @param node The binary expression node
      * @param table Reference to the symbol table
-     * @return The result DataType, or DataType.UNKNOWN if types don't match
+     * @return The result DataType, or DataType.UNKNOWN if validation fails
      */
     private DataType inferBinaryExpressionType(ASTNode node, SymbolTable table) {
         if (node.getChildCount() < 2) {
@@ -253,11 +266,165 @@ public class Analisis_Semantico {
             return DataType.UNKNOWN;
         }
         
+        String operator = node.getToken() != null ? node.getToken().getLexeme() : null;
+        if (operator == null) {
+            return DataType.UNKNOWN;
+        }
+        
+        OperatorCategory category = getOperatorCategory(operator);
+        
+        switch (category) {
+            case ARITHMETIC:
+                return validateArithmeticOperation(operator, leftType, rightType, node);
+            case LOGICAL:
+                return validateLogicalOperation(operator, leftType, rightType, node);
+            case RELATIONAL:
+                return validateRelationalOperation(operator, leftType, rightType, node);
+            case EQUALITY:
+                return validateEqualityOperation(operator, leftType, rightType, node);
+            default:
+                return DataType.UNKNOWN;
+        }
+    }
+    
+    /**
+     * Validates arithmetic operations (+, -, *, /).
+     * Both operands must be the same numeric type.
+     * 
+     * @param operator The arithmetic operator
+     * @param leftType Type of left operand
+     * @param rightType Type of right operand
+     * @param node The expression node for error reporting
+     * @return Result type if valid, DataType.UNKNOWN otherwise
+     */
+    private DataType validateArithmeticOperation(String operator, DataType leftType, DataType rightType, ASTNode node) {
+        if (!isNumericType(leftType) || !isNumericType(rightType)) {
+            generateBinaryOpError(operator, leftType, rightType, node);
+            return DataType.UNKNOWN;
+        }
+        
         if (leftType != rightType) {
+            generateBinaryOpError(operator, leftType, rightType, node);
             return DataType.UNKNOWN;
         }
         
         return leftType;
+    }
+    
+    /**
+     * Validates logical operations (&&, ||).
+     * Both operands must be BOOL.
+     * 
+     * @param operator The logical operator
+     * @param leftType Type of left operand
+     * @param rightType Type of right operand
+     * @param node The expression node for error reporting
+     * @return BOOL if valid, DataType.UNKNOWN otherwise
+     */
+    private DataType validateLogicalOperation(String operator, DataType leftType, DataType rightType, ASTNode node) {
+        if (leftType != DataType.BOOL || rightType != DataType.BOOL) {
+            generateBinaryOpError(operator, leftType, rightType, node);
+            return DataType.UNKNOWN;
+        }
+        
+        return DataType.BOOL;
+    }
+    
+    /**
+     * Validates relational operations (<, >, <=, >=).
+     * Both operands must be the same numeric type.
+     * Result is BOOL.
+     * 
+     * @param operator The relational operator
+     * @param leftType Type of left operand
+     * @param rightType Type of right operand
+     * @param node The expression node for error reporting
+     * @return BOOL if valid, DataType.UNKNOWN otherwise
+     */
+    private DataType validateRelationalOperation(String operator, DataType leftType, DataType rightType, ASTNode node) {
+        if (!isNumericType(leftType) || !isNumericType(rightType)) {
+            generateBinaryOpError(operator, leftType, rightType, node);
+            return DataType.UNKNOWN;
+        }
+        
+        if (leftType != rightType) {
+            generateBinaryOpError(operator, leftType, rightType, node);
+            return DataType.UNKNOWN;
+        }
+        
+        return DataType.BOOL;
+    }
+    
+    /**
+     * Validates equality operations (==, !=).
+     * Both operands must be exactly the same type.
+     * Result is BOOL.
+     * 
+     * @param operator The equality operator
+     * @param leftType Type of left operand
+     * @param rightType Type of right operand
+     * @param node The expression node for error reporting
+     * @return BOOL if valid, DataType.UNKNOWN otherwise
+     */
+    private DataType validateEqualityOperation(String operator, DataType leftType, DataType rightType, ASTNode node) {
+        if (leftType != rightType) {
+            generateBinaryOpError(operator, leftType, rightType, node);
+            return DataType.UNKNOWN;
+        }
+        
+        return DataType.BOOL;
+    }
+    
+    /**
+     * Generates a semantic error for binary operator type mismatch.
+     */
+    private void generateBinaryOpError(String operator, DataType leftType, DataType rightType, ASTNode node) {
+        String errorMsg = "Operador '" + operator + "' no aplicable a operandos de tipo '" + 
+                         leftType.getTypeName() + "' y '" + rightType.getTypeName() + "'";
+        
+        int line = node.getToken() != null ? node.getToken().getLine() : 0;
+        int column = node.getToken() != null ? node.getToken().getColumn() : 0;
+        
+        SemanticError error = new SemanticError("expresion", errorMsg, line, column);
+        errors.add(error);
+    }
+    
+    /**
+     * Checks if a DataType is numeric (INT, FLOAT, DOUBLE, NUMBER).
+     */
+    private boolean isNumericType(DataType type) {
+        return type == DataType.INT || type == DataType.FLOAT || 
+               type == DataType.DOUBLE || type == DataType.NUMBER;
+    }
+    
+    /**
+     * Categorizes an operator by its type.
+     */
+    private OperatorCategory getOperatorCategory(String operator) {
+        if (operator == null) {
+            return null;
+        }
+        
+        switch (operator) {
+            case "+":
+            case "-":
+            case "*":
+            case "/":
+                return OperatorCategory.ARITHMETIC;
+            case "&&":
+            case "||":
+                return OperatorCategory.LOGICAL;
+            case "<":
+            case ">":
+            case "<=":
+            case ">=":
+                return OperatorCategory.RELATIONAL;
+            case "==":
+            case "!=":
+                return OperatorCategory.EQUALITY;
+            default:
+                return null;
+        }
     }
     
     /**
