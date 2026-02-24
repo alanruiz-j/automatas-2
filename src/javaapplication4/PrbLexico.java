@@ -395,9 +395,6 @@ public class PrbLexico extends javax.swing.JFrame
         mt.setRowCount(0);
         BtnSintactico.setEnabled(true);
         
-        // Save the input text
-        Archivos.guardarArchivo(TxAnalisis.getText());
-        
         // Create scanner and analyze the text
         Analisis_Lexico analyzer = new Analisis_Lexico();
         java.util.List<Token> tokens = analyzer.scan(TxAnalisis.getText());
