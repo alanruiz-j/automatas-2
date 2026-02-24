@@ -159,14 +159,17 @@ public class Analisis_Semantico {
         }
         
         if (declaredType != expressionType) {
-            SemanticError error = new SemanticError(
-                identifierName,
-                "Tipo incompatible: se esperaba '" + declaredType.getTypeName() + "' pero se obtuvo '" + expressionType.getTypeName() + "'",
-                0,
-                0
-            );
-            errors.add(error);
-            return false;
+            if (!isTypeCompatible(declaredType, expressionType)) {
+                SemanticError error = new SemanticError(
+                    identifierName,
+                    "Tipo incompatible: se esperaba '" + declaredType.getTypeName() + "' pero se obtuvo '" + expressionType.getTypeName() + "'",
+                    0,
+                    0
+                );
+                errors.add(error);
+                return false;
+            }
+            return true;
         }
         
         return true;
@@ -395,6 +398,22 @@ public class Analisis_Semantico {
     private boolean isNumericType(DataType type) {
         return type == DataType.INT || type == DataType.FLOAT || 
                type == DataType.DOUBLE || type == DataType.NUMBER;
+    }
+    
+    /**
+     * Checks if two types are compatible for assignment.
+     * Allows DOUBLE to be assigned to FLOAT (widening conversion).
+     */
+    private boolean isTypeCompatible(DataType declaredType, DataType expressionType) {
+        if (declaredType == expressionType) {
+            return true;
+        }
+        
+        if (declaredType == DataType.FLOAT && expressionType == DataType.DOUBLE) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**

@@ -744,6 +744,11 @@ public class Parser {
             return new ASTNode(ASTNode.NodeType.STRING_LITERAL, advance());
         }
         
+        // Character literal
+        if (check(TokenType.LITERAL_CARACTER)) {
+            return new ASTNode(ASTNode.NodeType.CHAR_LITERAL, advance());
+        }
+        
         // Number literal
         if (check(TokenType.LITERAL_NUMERICO) || check(TokenType.ENTERO) || check(TokenType.DECIMAL)) {
             return new ASTNode(ASTNode.NodeType.NUMBER_LITERAL, advance());
