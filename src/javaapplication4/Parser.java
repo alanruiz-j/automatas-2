@@ -283,8 +283,8 @@ public class Parser {
             return parseForStatement();
         }
         
-        // Check if it's a type declaration
-        if (isType(token)) {
+        // Check if it's a type declaration (or const declaration)
+        if (canStartDeclaration(token)) {
             // Look ahead to see if it's declaration or assignment
             int save = current;
             advance(); // consume type
@@ -331,15 +331,25 @@ public class Parser {
     }
     
     /**
-     * DECLARATION ::= TYPE IDENTIFIER ("=" EXPRESSION)? ";"
+     * DECLARATION ::= "const"? TYPE IDENTIFIER ("=" EXPRESSION)? ";"
      */
     private ASTNode parseDeclaration() {
         ASTNode declaration = new ASTNode(ASTNode.NodeType.DECLARATION);
         
+        // Check for 'const' modifier
+        boolean isConst = false;
+        if (match(TokenType.PALABRA_RESERVADA, "const")) {
+            isConst = true;
+            declaration.setConstant(true);
+        }
+        
         // Parse type
         Token typeToken = parseType();
+        String typeName = null;
         if (typeToken != null) {
+            typeName = typeToken.getLexeme();
             declaration.addChild(new ASTNode(ASTNode.NodeType.TYPE, typeToken));
+            declaration.setDataType(typeName);
         }
         
         // Parse variable name
@@ -734,6 +744,11 @@ public class Parser {
             return new ASTNode(ASTNode.NodeType.STRING_LITERAL, advance());
         }
         
+        // Character literal
+        if (check(TokenType.LITERAL_CARACTER)) {
+            return new ASTNode(ASTNode.NodeType.CHAR_LITERAL, advance());
+        }
+        
         // Number literal
         if (check(TokenType.LITERAL_NUMERICO) || check(TokenType.ENTERO) || check(TokenType.DECIMAL)) {
             return new ASTNode(ASTNode.NodeType.NUMBER_LITERAL, advance());
@@ -794,6 +809,26 @@ public class Parser {
             token.getLexeme().equals("void")) {
             return true;
         }
+        return false;
+    }
+    
+    /**
+     * Check if token can start a declaration (type keyword or const modifier)
+     */
+    private boolean canStartDeclaration(Token token) {
+        if (token == null) return false;
+        
+        // Check if it's a type keyword
+        if (isType(token)) {
+            return true;
+        }
+        
+        // Check for 'const' modifier
+        if (token.getType() == TokenType.PALABRA_RESERVADA && 
+            token.getLexeme().equals("const")) {
+            return true;
+        }
+        
         return false;
     }
     

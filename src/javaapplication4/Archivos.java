@@ -27,6 +27,16 @@ public class Archivos
  * @author David de la Luz
  */
 
+    private static File currentFile = null;
+    
+    public static void setCurrentFile(File file) {
+        currentFile = file;
+    }
+    
+    public static File getCurrentFile() {
+        return currentFile;
+    }
+    
     public static void guardarArchivo(String texto) {
         FileWriter fichero = null;
         PrintWriter pw = null;
@@ -51,6 +61,80 @@ public class Archivos
                     fichero.close();
                 } catch (IOException ex) {
                     Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }
+    
+    public static void guardarArchivoActual(String texto) {
+        if (currentFile != null) {
+            FileWriter fichero = null;
+            PrintWriter pw = null;
+            
+            try {
+                fichero = new FileWriter(currentFile);
+                pw = new PrintWriter(fichero);
+                pw.print(texto);
+            } catch (IOException ex) {
+                Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                if (fichero != null) {
+                    try {
+                        fichero.close();
+                    } catch (IOException ex) {
+                        Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        } else {
+            // If no current file, use save as
+            guardarArchivoComo(texto);
+        }
+    }
+    
+    public static void guardarArchivoComo(String texto) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Guardar archivo");
+        
+        // Set default directory to Datos folder
+        File datosFolder = new File("Datos");
+        if (datosFolder.exists()) {
+            fileChooser.setCurrentDirectory(datosFolder);
+        }
+        
+        // Add filter for .txt files
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Archivos de texto (*.txt)", "txt");
+        fileChooser.setFileFilter(filter);
+        
+        // Show save dialog
+        int result = fileChooser.showSaveDialog(null);
+        
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            
+            // Add .txt extension if not present
+            if (!file.getName().endsWith(".txt")) {
+                file = new File(file.getAbsolutePath() + ".txt");
+            }
+            
+            FileWriter fichero = null;
+            PrintWriter pw = null;
+            
+            try {
+                fichero = new FileWriter(file);
+                pw = new PrintWriter(fichero);
+                pw.print(texto);
+                currentFile = file; // Update current file reference
+                
+            } catch (IOException ex) {
+                Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                if (fichero != null) {
+                    try {
+                        fichero.close();
+                    } catch (IOException ex) {
+                        Logger.getLogger(Archivos.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
         }
@@ -81,6 +165,7 @@ public class Archivos
         
         if (result == JFileChooser.APPROVE_OPTION) {
             archivo = fileChooser.getSelectedFile();
+            currentFile = archivo; // Set current file for save functionality
             try {
                 fr = new FileReader(archivo);
                 br = new BufferedReader(fr);

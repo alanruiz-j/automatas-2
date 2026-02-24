@@ -83,6 +83,7 @@ public enum TokenType {
     // Literals
     LITERAL_NUMERICO(5),
     LITERAL_CADENA(6),
+    LITERAL_CARACTER(43),
     
     // Operators
     OPERADOR_ASIGNACION(7),    // =

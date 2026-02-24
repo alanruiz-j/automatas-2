@@ -309,7 +309,7 @@ public class Scanner {
         
         advance(); // consume closing '
         
-        tokens.add(new Token("'" + value.toString() + "'", TokenType.LITERAL_CADENA, line, startColumn));
+        tokens.add(new Token("'" + value.toString() + "'", TokenType.LITERAL_CARACTER, line, startColumn));
     }
     
     private void number() {

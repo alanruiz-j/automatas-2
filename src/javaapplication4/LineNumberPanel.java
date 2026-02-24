@@ -14,7 +14,8 @@ import java.awt.geom.Rectangle2D;
 
 /**
  * A panel that displays line numbers for a JTextArea.
- * Synchronizes scrolling and updates automatically.
+ * Designed to be used as a row header view in a JScrollPane.
+ * Automatically synchronizes scrolling with the text area.
  * Highlights the current line.
  * @author Gerardo
  */
@@ -37,26 +38,31 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
         textArea.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                updatePreferredWidth();
+                updatePreferredSize();
                 repaint();
             }
         });
 
-        // Set preferred width based on initial line count
-        updatePreferredWidth();
+        // Set preferred size based on initial content
+        updatePreferredSize();
     }
     
-    private void updatePreferredWidth() {
+    private void updatePreferredSize() {
         int lineCount = getLineCount();
         int digits = String.valueOf(lineCount).length();
         // Minimum 2 digits width
         digits = Math.max(digits, 2);
         
-        FontMetrics fm = getFontMetrics(getFont());
+        // Use text area's font metrics for consistency
+        FontMetrics fm = textArea.getFontMetrics(textArea.getFont());
         int charWidth = fm.charWidth('0');
         int width = charWidth * digits + 20; // 20px padding
         
-        setPreferredSize(new Dimension(width, textArea.getHeight()));
+        // Match height to text area's preferred size (not current height)
+        // This ensures all lines are accounted for
+        int height = textArea.getPreferredSize().height;
+        
+        setPreferredSize(new Dimension(width, height));
         revalidate();
         repaint();
     }
@@ -80,25 +86,18 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                             RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 
-        // Use the EXACT same FontMetrics as the textArea for consistency
-        FontMetrics textFm = textArea.getFontMetrics(textArea.getFont());
-        int lineHeight = textFm.getHeight();
-        int ascent = textFm.getAscent();
+        // Use text area's font metrics for exact consistency
+        FontMetrics fm = textArea.getFontMetrics(textArea.getFont());
+        int lineHeight = fm.getHeight();
+        int ascent = fm.getAscent();
 
-        // Step 1: Determine the current visible area using getClipBounds
-        Rectangle clip = g.getClipBounds();
-        if (clip == null) {
-            clip = getBounds();
-        }
-
+        // Get the visible rectangle of the text area (accounts for scrolling)
+        Rectangle visibleRect = textArea.getVisibleRect();
+        
         try {
-            // Step 2: Use viewToModel to identify which range of text lines are visible
-            // Convert clip bounds Y coordinates to document positions
-            Point topPoint = new Point(0, clip.y);
-            Point bottomPoint = new Point(0, clip.y + clip.height);
-            
-            int startOffset = textArea.viewToModel(topPoint);
-            int endOffset = textArea.viewToModel(bottomPoint);
+            // Determine visible range using viewToModel on visible rectangle bounds
+            int startOffset = textArea.viewToModel(new Point(0, visibleRect.y));
+            int endOffset = textArea.viewToModel(new Point(0, visibleRect.y + visibleRect.height));
             
             // Convert offsets to line numbers
             int startLine = textArea.getLineOfOffset(startOffset) + 1;
@@ -109,7 +108,7 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
             if (startLine < 1) startLine = 1;
             if (endLine > totalLines) endLine = totalLines;
 
-            // Step 3: Iterate over visible lines using modelToView2D
+            // Iterate over visible lines
             for (int line = startLine; line <= endLine; line++) {
                 try {
                     // Get the document offset at the start of this line
@@ -118,21 +117,22 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
                     // Use modelToView2D to get the exact rectangle where this line is rendered
                     Rectangle2D viewRect = textArea.modelToView2D(lineStartOffset);
                     
-                    // Step 4: Use the Y coordinate (adjusted for ascent) to draw the line number
+                    // Get the Y position - since this panel is in the row header view,
+                    // it scrolls with the text area, so we use the Y directly
                     int y = (int) viewRect.getY();
                     
                     // Highlight current line
                     if (line == currentLine) {
                         g.setColor(new Color(220, 220, 220));
-                        g.fillRect(0, y - clip.y, getWidth(), lineHeight);
+                        g.fillRect(0, y, getWidth(), lineHeight);
                     }
 
                     // Draw line number at the exact Y position of the text line
                     g.setColor(Color.DARK_GRAY);
                     String lineNum = String.valueOf(line);
-                    int x = getWidth() - textFm.stringWidth(lineNum) - 8;
-                    // Adjust Y for panel coordinate space and add ascent for baseline alignment
-                    g.drawString(lineNum, x, y - clip.y + ascent);
+                    int x = getWidth() - fm.stringWidth(lineNum) - 8;
+                    // Add ascent for baseline alignment
+                    g.drawString(lineNum, x, y + ascent);
                     
                 } catch (BadLocationException ex) {
                     // Skip this line if we can't determine its position
@@ -141,26 +141,25 @@ public class LineNumberPanel extends JPanel implements DocumentListener, CaretLi
             }
         } catch (BadLocationException ex) {
             // If we can't determine the visible range, fall back to drawing nothing
-            // or handle the error as appropriate
         }
     }
     
     // DocumentListener methods
     @Override
     public void insertUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     
     @Override
     public void removeUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     
     @Override
     public void changedUpdate(DocumentEvent e) {
-        updatePreferredWidth();
+        updatePreferredSize();
         repaint();
     }
     

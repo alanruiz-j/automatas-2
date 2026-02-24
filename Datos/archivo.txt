@@ -1,27 +1,14 @@
-// Codigo de prueba con ciclos y try
+// Test 02: Constantes - Declaracion y uso correcto
 structure Main (
     public const void main [ ] (
-        int x;
-        int y;
-        x = 10;
-        y = 20;
+        const int MAXIMO = 100;
+        const float PI = 3;
+        const string TITULO = "Prueba";
+        const bool VERDADERO = true;
         
-        if (x > 5) (
-            print["x is greater than 5"];
-        ) else (
-            print["x is 5 or less"];
-        )
-        
-        while (x < y) (
-            x = x + 1;
-            print[x];
-        )
-        
-        try (
-            print["Inside try block"];
-        ) catch (
-            print["Error caught"];
-        )
+        int valor;
+        valor = MAXIMO;
+        print[valor];
     )
 )
 
