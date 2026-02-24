@@ -545,12 +545,49 @@ public class Analisis_Semantico {
         if (node.getType() == ASTNode.NodeType.DECLARATION) {
             boolean isConst = node.isConstant();
             DataType varType = node.getDataType();
+            String identifierName = null;
+            ASTNode identifierNode = null;
+            
             for (int i = 0; i < node.getChildCount(); i++) {
                 ASTNode child = node.getChild(i);
                 if (child.getType() == ASTNode.NodeType.IDENTIFIER) {
-                    String identifierName = child.getValue();
+                    identifierName = child.getValue();
+                    identifierNode = child;
                     if (identifierName != null) {
                         symbolTable.addInCurrentScope(identifierName, isConst, varType);
+                    }
+                }
+            }
+            
+            if (identifierName != null && varType != null) {
+                System.out.println("[DEBUG] Declaration: " + identifierName + " declared type: " + varType);
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    ASTNode child = node.getChild(i);
+                    System.out.println("[DEBUG] Child " + i + " type: " + child.getType() + " value: " + child.getValue());
+                    if (child.getType() == ASTNode.NodeType.EXPRESSION || 
+                        child.getType() == ASTNode.NodeType.NUMBER_LITERAL ||
+                        child.getType() == ASTNode.NodeType.STRING_LITERAL ||
+                        child.getType() == ASTNode.NodeType.CHAR_LITERAL ||
+                        child.getType() == ASTNode.NodeType.BOOL_LITERAL ||
+                        child.getType() == ASTNode.NodeType.IDENTIFIER ||
+                        child.getType() == ASTNode.NodeType.TERM ||
+                        child.getType() == ASTNode.NodeType.FACTOR) {
+                        DataType initType = inferExpressionType(child, symbolTable);
+                        System.out.println("[DEBUG] Inferred init type: " + initType);
+                        
+                        if (varType != DataType.UNKNOWN && initType != DataType.UNKNOWN && varType != initType) {
+                            System.out.println("[DEBUG] Type mismatch detected!");
+                            if (!isTypeCompatible(varType, initType)) {
+                                SemanticError error = new SemanticError(
+                                    identifierName,
+                                    "Tipo incompatible: se esperaba '" + varType.getTypeName() + "' pero se obtuvo '" + initType.getTypeName() + "'",
+                                    node.getLine(),
+                                    node.getColumn()
+                                );
+                                errors.add(error);
+                            }
+                        }
+                        // Removed break; to check all relevant child nodes
                     }
                 }
             }
