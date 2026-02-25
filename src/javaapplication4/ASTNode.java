@@ -40,6 +40,7 @@ public class ASTNode {
         BOOL_LITERAL,      // boolean literal
         FUNCTION_CALL,     // function invocation
         ARGUMENT_LIST,     // function arguments
+        ARRAY_INITIALIZER, // array initialization {expr1, expr2, ...}
         TYPE,              // data type
         ACCESS_MODIFIER,   // public/private
         ERROR              // error node
@@ -53,6 +54,7 @@ public class ASTNode {
     private String value;
     private boolean isConstant;
     private DataType dataType;
+    private int arraySize;
     
     public ASTNode(NodeType type) {
         this.type = type;
@@ -62,6 +64,7 @@ public class ASTNode {
         this.value = null;
         this.isConstant = false;
         this.dataType = DataType.UNKNOWN;
+        this.arraySize = 0;
     }
     
     public ASTNode(NodeType type, Token token) {
@@ -73,6 +76,7 @@ public class ASTNode {
         this.value = token != null ? token.getLexeme() : null;
         this.isConstant = false;
         this.dataType = DataType.UNKNOWN;
+        this.arraySize = 0;
     }
     
     public ASTNode(NodeType type, String value, int line, int column) {
@@ -83,6 +87,7 @@ public class ASTNode {
         this.children = new ArrayList<>();
         this.isConstant = false;
         this.dataType = DataType.UNKNOWN;
+        this.arraySize = 0;
     }
     
     public NodeType getType() {
@@ -169,6 +174,18 @@ public class ASTNode {
     
     public void setDataType(String typeName) {
         this.dataType = DataType.fromString(typeName);
+    }
+    
+    public int getArraySize() {
+        return arraySize;
+    }
+    
+    public void setArraySize(int arraySize) {
+        this.arraySize = arraySize;
+    }
+    
+    public boolean isArray() {
+        return arraySize > 0;
     }
     
     public boolean isError() {

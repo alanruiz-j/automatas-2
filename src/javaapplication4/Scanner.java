@@ -199,6 +199,8 @@ public class Scanner {
                 break;
             case '[':
             case ']':
+            case '{':
+            case '}':
                 addToken(TokenType.AGRUPADOR);
                 break;
             case ';':

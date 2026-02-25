@@ -547,6 +547,53 @@ public class Analisis_Semantico {
             DataType varType = node.getDataType();
             String identifierName = null;
             ASTNode identifierNode = null;
+            int arraySize = node.getArraySize();
+            DataType baseType = DataType.UNKNOWN;
+            
+            // Get the base type from TYPE child node
+            for (int i = 0; i < node.getChildCount(); i++) {
+                ASTNode child = node.getChild(i);
+                if (child.getType() == ASTNode.NodeType.TYPE) {
+                    String typeName = child.getValue();
+                    if (typeName != null) {
+                        baseType = DataType.fromString(typeName);
+                    }
+                    break;
+                }
+            }
+            
+            // Validate array declaration
+            if (arraySize > 0) {
+                // Array declaration: type must be primitive
+                if (baseType == DataType.UNKNOWN) {
+                    SemanticError error = new SemanticError(
+                        identifierName != null ? identifierName : "unknown",
+                        "Tipo de array inválido",
+                        node.getLine(),
+                        node.getColumn()
+                    );
+                    errors.add(error);
+                } else if (baseType == DataType.ARRAY) {
+                    SemanticError error = new SemanticError(
+                        identifierName != null ? identifierName : "unknown",
+                        "No se permiten arrays de arrays (arrays multidimensionales)",
+                        node.getLine(),
+                        node.getColumn()
+                    );
+                    errors.add(error);
+                } else if (!baseType.isPrimitive()) {
+                    SemanticError error = new SemanticError(
+                        identifierName != null ? identifierName : "unknown",
+                        "El tipo base del array debe ser un tipo primitivo (int, float, double, string, char, bool)",
+                        node.getLine(),
+                        node.getColumn()
+                    );
+                    errors.add(error);
+                }
+                
+                // Set the type to ARRAY
+                varType = DataType.ARRAY;
+            }
             
             for (int i = 0; i < node.getChildCount(); i++) {
                 ASTNode child = node.getChild(i);
@@ -554,13 +601,23 @@ public class Analisis_Semantico {
                     identifierName = child.getValue();
                     identifierNode = child;
                     if (identifierName != null) {
-                        symbolTable.addInCurrentScope(identifierName, isConst, varType);
+                        try {
+                            symbolTable.addInCurrentScope(identifierName, isConst, varType, arraySize);
+                        } catch (IllegalArgumentException e) {
+                            SemanticError error = new SemanticError(
+                                identifierName,
+                                e.getMessage(),
+                                node.getLine(),
+                                node.getColumn()
+                            );
+                            errors.add(error);
+                        }
                     }
                 }
             }
             
             if (identifierName != null && varType != null) {
-                System.out.println("[DEBUG] Declaration: " + identifierName + " declared type: " + varType);
+                System.out.println("[DEBUG] Declaration: " + identifierName + " declared type: " + varType + (arraySize > 0 ? "[" + arraySize + "]" : ""));
                 for (int i = 0; i < node.getChildCount(); i++) {
                     ASTNode child = node.getChild(i);
                     System.out.println("[DEBUG] Child " + i + " type: " + child.getType() + " value: " + child.getValue());
@@ -571,23 +628,54 @@ public class Analisis_Semantico {
                         child.getType() == ASTNode.NodeType.BOOL_LITERAL ||
                         child.getType() == ASTNode.NodeType.IDENTIFIER ||
                         child.getType() == ASTNode.NodeType.TERM ||
-                        child.getType() == ASTNode.NodeType.FACTOR) {
-                        DataType initType = inferExpressionType(child, symbolTable);
-                        System.out.println("[DEBUG] Inferred init type: " + initType);
+                        child.getType() == ASTNode.NodeType.FACTOR ||
+                        child.getType() == ASTNode.NodeType.ARRAY_INITIALIZER) {
                         
-                        if (varType != DataType.UNKNOWN && initType != DataType.UNKNOWN && varType != initType) {
-                            System.out.println("[DEBUG] Type mismatch detected!");
-                            if (!isTypeCompatible(varType, initType)) {
+                        // Handle array initialization
+                        if (child.getType() == ASTNode.NodeType.ARRAY_INITIALIZER) {
+                            int initCount = child.getChildCount();
+                            if (arraySize > 0 && initCount != arraySize) {
                                 SemanticError error = new SemanticError(
                                     identifierName,
-                                    "Tipo incompatible: se esperaba '" + varType.getTypeName() + "' pero se obtuvo '" + initType.getTypeName() + "'",
-                                    node.getLine(),
-                                    node.getColumn()
+                                    "El número de elementos en la inicialización (" + initCount + ") debe coincidir con el tamaño del array (" + arraySize + ")",
+                                    child.getLine(),
+                                    child.getColumn()
                                 );
                                 errors.add(error);
                             }
+                            // Validate each element type
+                            for (int j = 0; j < child.getChildCount(); j++) {
+                                ASTNode element = child.getChild(j);
+                                DataType elementType = inferExpressionType(element, symbolTable);
+                                if (elementType != DataType.UNKNOWN && baseType != DataType.UNKNOWN && elementType != baseType) {
+                                    if (!isTypeCompatible(baseType, elementType)) {
+                                        SemanticError error = new SemanticError(
+                                            identifierName,
+                                            "Tipo incompatible en elemento " + (j+1) + ": se esperaba '" + baseType.getTypeName() + "' pero se obtuvo '" + elementType.getTypeName() + "'",
+                                            element.getLine(),
+                                            element.getColumn()
+                                        );
+                                        errors.add(error);
+                                    }
+                                }
+                            }
+                        } else {
+                            DataType initType = inferExpressionType(child, symbolTable);
+                            System.out.println("[DEBUG] Inferred init type: " + initType);
+
+                            if (varType != DataType.UNKNOWN && initType != DataType.UNKNOWN && varType != initType) {
+                                System.out.println("[DEBUG] Type mismatch detected!");
+                                if (!isTypeCompatible(varType, initType)) {
+                                    SemanticError error = new SemanticError(
+                                        identifierName,
+                                        "Tipo incompatible: se esperaba '" + varType.getTypeName() + "' pero se obtuvo '" + initType.getTypeName() + "'",
+                                        node.getLine(),
+                                        node.getColumn()
+                                    );
+                                    errors.add(error);
+                                }
+                            }
                         }
-                        // Removed break; to check all relevant child nodes
                     }
                 }
             }

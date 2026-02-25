@@ -331,7 +331,7 @@ public class Parser {
     }
     
     /**
-     * DECLARATION ::= "const"? TYPE IDENTIFIER ("=" EXPRESSION)? ";"
+     * DECLARATION ::= "const"? TYPE IDENTIFIER ("[" INTEGER_LITERAL "]")? ("=" EXPRESSION | "=" "{" EXPRESSION_LIST "}")? ";"
      */
     private ASTNode parseDeclaration() {
         ASTNode declaration = new ASTNode(ASTNode.NodeType.DECLARATION);
@@ -346,8 +346,10 @@ public class Parser {
         // Parse type
         Token typeToken = parseType();
         String typeName = null;
+        DataType baseType = DataType.UNKNOWN;
         if (typeToken != null) {
             typeName = typeToken.getLexeme();
+            baseType = DataType.fromString(typeName);
             declaration.addChild(new ASTNode(ASTNode.NodeType.TYPE, typeToken));
             declaration.setDataType(typeName);
         }
@@ -358,11 +360,56 @@ public class Parser {
             declaration.addChild(new ASTNode(ASTNode.NodeType.IDENTIFIER, name));
         }
         
+        // Check for array brackets
+        int arraySize = 0;
+        if (check(TokenType.AGRUPADOR) && peek().getLexeme().equals("[")) {
+            consume(TokenType.AGRUPADOR, "[", "Se esperaba '[' después del identificador");
+            
+            // Parse the size - must be an integer literal
+            Token sizeToken = consume(TokenType.ENTERO, "Se esperaba tamaño de array (número entero positivo)");
+            if (sizeToken != null) {
+                try {
+                    arraySize = Integer.parseInt(sizeToken.getLexeme());
+                    if (arraySize <= 0) {
+                        error("El tamaño del array debe ser un número entero positivo", sizeToken);
+                        arraySize = 0;
+                    }
+                } catch (NumberFormatException e) {
+                    error("El tamaño del array debe ser un número entero positivo", sizeToken);
+                    arraySize = 0;
+                }
+            } else {
+                error("Se esperaba tamaño de array (número entero positivo)", peek());
+            }
+            
+            consume(TokenType.AGRUPADOR, "]", "Se esperaba ']' después del tamaño del array");
+            
+            // Set array info on declaration
+            declaration.setArraySize(arraySize);
+            if (arraySize > 0 && baseType != DataType.UNKNOWN) {
+                declaration.setDataType(DataType.ARRAY);
+            }
+        }
+        
         // Optional initialization
         if (match(TokenType.OPERADOR_ASIGNACION, "=")) {
-            ASTNode init = parseExpression();
-            if (init != null) {
-                declaration.addChild(init);
+            // Check for array initialization: { expr1, expr2, ... }
+            if (check(TokenType.AGRUPADOR) && peek().getLexeme().equals("{")) {
+                consume(TokenType.AGRUPADOR, "{", "Se esperaba '{' para inicialización del array");
+                
+                ASTNode initList = parseArrayInitializerList();
+                
+                if (initList != null) {
+                    declaration.addChild(initList);
+                }
+                
+                consume(TokenType.AGRUPADOR, "}", "Se esperaba '}' después de la inicialización del array");
+            } else {
+                // Single expression initialization
+                ASTNode init = parseExpression();
+                if (init != null) {
+                    declaration.addChild(init);
+                }
             }
         }
         
@@ -370,6 +417,31 @@ public class Parser {
         consume(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la declaración");
         
         return declaration;
+    }
+    
+    /**
+     * Parse array initializer list: EXPRESSION ("," EXPRESSION)*
+     */
+    private ASTNode parseArrayInitializerList() {
+        ASTNode list = new ASTNode(ASTNode.NodeType.ARRAY_INITIALIZER);
+        
+        if (check(TokenType.AGRUPADOR) && peek().getLexeme().equals("}")) {
+            return list; // Empty list
+        }
+        
+        ASTNode first = parseExpression();
+        if (first != null) {
+            list.addChild(first);
+        }
+        
+        while (match(TokenType.COMA, ",")) {
+            ASTNode next = parseExpression();
+            if (next != null) {
+                list.addChild(next);
+            }
+        }
+        
+        return list;
     }
     
     /**

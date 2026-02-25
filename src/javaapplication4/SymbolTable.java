@@ -13,6 +13,7 @@ public class SymbolTable {
     private Map<String, Integer> identifierScopes;
     private Map<String, Boolean> constantIdentifiers;
     private Map<String, DataType> identifierTypes;
+    private Map<String, Integer> identifierArraySizes;
     private int currentScope;
     private Set<Integer> globalScopes;
     
@@ -21,6 +22,7 @@ public class SymbolTable {
         this.identifierScopes = new HashMap<>();
         this.constantIdentifiers = new HashMap<>();
         this.identifierTypes = new HashMap<>();
+        this.identifierArraySizes = new HashMap<>();
         this.currentScope = 0;
         this.globalScopes = new HashSet<>();
     }
@@ -43,11 +45,19 @@ public class SymbolTable {
     }
     
     public void addInCurrentScope(String identifier, boolean isConstant, DataType type) {
+        addInCurrentScope(identifier, isConstant, type, 0);
+    }
+    
+    public void addInCurrentScope(String identifier, boolean isConstant, DataType type, int arraySize) {
         if (identifier != null && !identifier.isEmpty()) {
+            if (isInCurrentScope(identifier)) {
+                throw new IllegalArgumentException("Duplicate declaration: '" + identifier + "' already declared in current scope");
+            }
             identifiers.add(identifier);
             identifierScopes.put(identifier, currentScope);
             constantIdentifiers.put(identifier, isConstant);
             identifierTypes.put(identifier, type);
+            identifierArraySizes.put(identifier, arraySize);
         }
     }
     
@@ -65,11 +75,19 @@ public class SymbolTable {
     }
     
     private void addAsGlobal(String identifier, boolean isConstant, DataType type) {
+        addAsGlobal(identifier, isConstant, type, 0);
+    }
+    
+    private void addAsGlobal(String identifier, boolean isConstant, DataType type, int arraySize) {
         if (identifier != null && !identifier.isEmpty()) {
+            if (globalScopes.contains(0) && contains(identifier) && getScopeLevel(identifier) == 0) {
+                throw new IllegalArgumentException("Duplicate declaration: '" + identifier + "' already declared in global scope");
+            }
             identifiers.add(identifier);
             identifierScopes.put(identifier, 0);
             constantIdentifiers.put(identifier, isConstant);
             identifierTypes.put(identifier, type);
+            identifierArraySizes.put(identifier, arraySize);
             globalScopes.add(0);
         }
     }
@@ -114,6 +132,14 @@ public class SymbolTable {
         return identifierTypes.getOrDefault(identifier, DataType.UNKNOWN);
     }
     
+    public int getArraySize(String identifier) {
+        return identifierArraySizes.getOrDefault(identifier, 0);
+    }
+    
+    public boolean isArray(String identifier) {
+        return getArraySize(identifier) > 0;
+    }
+    
     public void enterScope() {
         currentScope++;
     }
@@ -143,6 +169,7 @@ public class SymbolTable {
         identifierScopes.clear();
         constantIdentifiers.clear();
         identifierTypes.clear();
+        identifierArraySizes.clear();
         currentScope = 0;
         globalScopes.clear();
     }
